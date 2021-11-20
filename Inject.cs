@@ -46,6 +46,7 @@ public class Inject : MonoBehaviour
     private Assembly _assembly;
     private Dictionary<string, object> _instances;
     private int _indexNew = 0;
+    private BindingFlags _flagsAll = BindingFlags.Default | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     
     private object InstantiateMono(Type type, int index = 0)
     {
@@ -54,7 +55,7 @@ public class Inject : MonoBehaviour
         
         if (!_instances.ContainsKey(typeString))
         {
-            result = FindObjectOfType(type);
+            result = FindObjectOfType(type, true);
             if (result == null)
             {
                 var go = new GameObject($"[{type.Name}]");
@@ -111,13 +112,13 @@ public class Inject : MonoBehaviour
             instance = Instantiate<InjectAttribute>(type);
         else instance = Instantiate<TAttribute>(type);
 
-        foreach (var member in type.GetFields())
+        foreach (var member in type.GetFields(_flagsAll))
         {
             Injecting<InjectAttribute>(member, instance, type);
             Injecting<InjectNewAttribute>(member, instance, type);
         }
            
-        foreach (var member in type.GetProperties())
+        foreach (var member in type.GetProperties(_flagsAll))
         {
             Injecting<InjectAttribute>(member, instance, type);
             Injecting<InjectNewAttribute>(member, instance, type);
@@ -130,7 +131,7 @@ public class Inject : MonoBehaviour
         
         if (type == typeParent) 
             throw(new Exception($"{type.Name} refers to itself"));
-        
+
         if (member.GetCustomAttribute(typeof(TAttribute), true) == null) return;
 
         int idClass = classes.FindIndex(c => c.GetClass().GetInterface(type.FullName) != null);
@@ -145,13 +146,13 @@ public class Inject : MonoBehaviour
             member.SetValue(parent, instance);
         }
 
-        foreach (var m in typeInject.GetFields())
+        foreach (var m in typeInject.GetFields(_flagsAll))
         {
             Injecting<InjectAttribute>(m, instance, typeInject);
             Injecting<InjectNewAttribute>(m, instance, typeInject);
         }
 
-        foreach (var m in typeInject.GetProperties())
+        foreach (var m in typeInject.GetProperties(_flagsAll))
         {
             Injecting<InjectAttribute>(m, instance, typeInject);
             Injecting<InjectNewAttribute>(m, instance, typeInject);
@@ -167,6 +168,7 @@ public class Inject : MonoBehaviour
         foreach (var type in _assembly.GetTypes())
         {
             if (!type.IsClass) continue;
+
             Injecting<InjectAttribute>(type);
             Injecting<InjectNewAttribute>(type);
         }
